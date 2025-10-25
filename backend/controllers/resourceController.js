@@ -1,6 +1,7 @@
 import Resource from '../models/Resource.js';
 import cloudinary from '../config/cloudinary.js';
 import streamifier from 'streamifier';
+import db from '../config/database.js';
 
 // Helper function to determine file type
 const getFileType = (mimetype) => {
@@ -12,13 +13,16 @@ const getFileType = (mimetype) => {
 };
 
 // Helper function to upload to Cloudinary
-const uploadToCloudinary = (buffer, resourceType) => {
+const uploadToCloudinary = (buffer, resourceType, fileType) => {
   return new Promise((resolve, reject) => {
+    const uploadOptions = {
+      resource_type: resourceType,
+      folder: 'college-resources',
+      access_mode: 'public'
+    };
+
     const uploadStream = cloudinary.uploader.upload_stream(
-      {
-        resource_type: resourceType,
-        folder: 'college-resources'
-      },
+      uploadOptions,
       (error, result) => {
         if (error) reject(error);
         else resolve(result);
@@ -46,13 +50,31 @@ export const uploadResource = async (req, res, next) => {
 
     // Upload to Cloudinary
     const resourceType = fileType === 'image' ? 'image' : 'raw';
-    const uploadResult = await uploadToCloudinary(file.buffer, resourceType);
+    const uploadResult = await uploadToCloudinary(file.buffer, resourceType, fileType);
+
+    // Construct proper viewing URL
+    // For raw files (PDFs, docs), modify URL to force inline display
+    let fileUrl = uploadResult.secure_url;
+    
+    if (resourceType === 'raw') {
+      // Replace /upload/ with /upload/fl_attachment:false/ for inline viewing
+      // This tells Cloudinary to serve the file inline instead of as download
+      fileUrl = uploadResult.secure_url.replace('/upload/', '/upload/fl_attachment:false/');
+    }
+
+    // Verify user exists in database before creating resource
+    const [userExists] = await db.query('SELECT id FROM users WHERE id = ?', [req.user.id]);
+    if (!userExists || userExists.length === 0) {
+      return res.status(400).json({ 
+        error: 'User not found in database. Please logout and login again to sync your account.' 
+      });
+    }
 
     // Save to database (returns the created resource)
     const resource = await Resource.create({
       title,
       description: description || null,
-      fileUrl: uploadResult.secure_url,
+      fileUrl: fileUrl,
       publicId: uploadResult.public_id,
       fileType,
       fileSize: file.size,
