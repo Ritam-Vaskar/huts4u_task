@@ -15,8 +15,14 @@ function AppContent() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-slate-100 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600"></div>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="relative">
+            <div className="animate-spin rounded-full h-20 w-20 border-4 border-blue-200"></div>
+            <div className="animate-spin rounded-full h-20 w-20 border-t-4 border-blue-600 absolute top-0 left-0"></div>
+          </div>
+          <p className="text-gray-700 font-semibold text-lg animate-pulse">Loading...</p>
+        </div>
       </div>
     );
   }
@@ -30,15 +36,19 @@ function AppContent() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-slate-100">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
       <Navigation activeTab={activeTab} onTabChange={setActiveTab} />
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         {activeTab === 'resources' && <PublicResources />}
         {activeTab === 'upload' && user.role === 'student' && <UploadResource />}
         {activeTab === 'my-resources' && user.role === 'student' && <MyResources />}
         {activeTab === 'admin' && user.role === 'admin' && <AdminDashboard />}
       </main>
+
+      <footer className="mt-auto py-6 text-center text-sm text-gray-500">
+        <p>© 2025 College Resource Portal. All rights reserved.</p>
+      </footer>
     </div>
   );
 }

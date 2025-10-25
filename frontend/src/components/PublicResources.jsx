@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { resourceAPI } from '../api';
-import { BookOpen, Download, ExternalLink, Search } from 'lucide-react';
+import { BookOpen, Download, ExternalLink, Search, Filter, FileText, Image, FileCode, Presentation } from 'lucide-react';
 
 export function PublicResources() {
   const [resources, setResources] = useState([]);
@@ -53,110 +53,153 @@ export function PublicResources() {
     return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
   };
 
+  const getFileIcon = (fileType) => {
+    switch (fileType) {
+      case 'pdf':
+        return <FileText className="w-5 h-5" />;
+      case 'image':
+        return <Image className="w-5 h-5" />;
+      case 'doc':
+        return <FileCode className="w-5 h-5" />;
+      case 'ppt':
+        return <Presentation className="w-5 h-5" />;
+      default:
+        return <FileText className="w-5 h-5" />;
+    }
+  };
+
+  const getFileTypeColor = (fileType) => {
+    switch (fileType) {
+      case 'pdf':
+        return 'bg-red-100 text-red-800';
+      case 'image':
+        return 'bg-green-100 text-green-800';
+      case 'doc':
+        return 'bg-blue-100 text-blue-800';
+      case 'ppt':
+        return 'bg-orange-100 text-orange-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
   if (loading) {
     return (
-      <div className="bg-white rounded-2xl shadow-lg p-8">
-        <div className="flex items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="bg-white rounded-2xl shadow-lg p-6 sm:p-8 animate-fadeIn">
+        <div className="flex flex-col items-center justify-center py-12">
+          <div className="relative">
+            <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-200"></div>
+            <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-blue-600 absolute top-0 left-0"></div>
+          </div>
+          <p className="mt-4 text-gray-600 font-medium">Loading resources...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="bg-white rounded-2xl shadow-lg p-8">
-      <div className="flex items-center gap-3 mb-6">
-        <div className="bg-blue-100 rounded-full p-3">
-          <BookOpen className="w-6 h-6 text-blue-600" />
+    <div className="space-y-6 animate-fadeIn">
+      <div className="bg-gradient-to-br from-white to-blue-50 rounded-2xl shadow-xl p-6 sm:p-8 card-hover">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+          <div className="flex items-center gap-3">
+            <div className="bg-gradient-to-br from-blue-600 to-indigo-600 rounded-full p-3 shadow-lg">
+              <BookOpen className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">Resource Library</h2>
+              <p className="text-gray-600 text-sm sm:text-base">{filteredResources.length} approved resources available</p>
+            </div>
+          </div>
         </div>
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">Resource Library</h2>
-          <p className="text-gray-600 text-sm">{filteredResources.length} approved resources available</p>
-        </div>
-      </div>
 
-      <div className="flex flex-col sm:flex-row gap-4 mb-6">
-        <div className="flex-1 relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-          <input
-            type="text"
-            placeholder="Search resources..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-          />
-        </div>
-        <select
-          value={filterType}
-          onChange={(e) => setFilterType(e.target.value)}
-          className="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-        >
-          <option value="all">All Types</option>
-          <option value="pdf">PDF</option>
-          <option value="image">Images</option>
-          <option value="doc">Documents</option>
-          <option value="ppt">Presentations</option>
-        </select>
-      </div>
-
-      {filteredResources.length === 0 ? (
-        <div className="text-center py-12">
-          <BookOpen className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-          <p className="text-gray-500 text-lg">No resources found</p>
-          <p className="text-gray-400 text-sm mt-2">
-            {searchQuery || filterType !== 'all'
-              ? 'Try adjusting your search or filters'
-              : 'Check back later for new resources'}
-          </p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {filteredResources.map((resource) => (
-            <div
-              key={resource.id}
-              className="border border-gray-200 rounded-lg p-5 hover:border-blue-300 hover:shadow-lg transition-all"
+        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-6">
+          <div className="flex-1 relative group">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 group-focus-within:text-blue-500 transition-colors" />
+            <input
+              type="text"
+              placeholder="Search resources..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all hover:border-gray-400"
+            />
+          </div>
+          <div className="relative group sm:w-48">
+            <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 group-focus-within:text-blue-500 transition-colors" />
+            <select
+              value={filterType}
+              onChange={(e) => setFilterType(e.target.value)}
+              className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all appearance-none bg-white hover:border-gray-400 cursor-pointer"
             >
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex-1">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">{resource.title}</h3>
-                  {resource.description && (
-                    <p className="text-gray-600 text-sm mb-3 line-clamp-2">{resource.description}</p>
-                  )}
-                  <div className="flex items-center gap-3 text-sm text-gray-500 mb-4">
-                    <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded font-medium uppercase">
-                      {resource.file_type}
-                    </span>
-                    <span>{formatFileSize(resource.file_size)}</span>
+              <option value="all">All Types</option>
+              <option value="pdf">📄 PDF</option>
+              <option value="image">🖼️ Images</option>
+              <option value="doc">📝 Documents</option>
+              <option value="ppt">📊 Presentations</option>
+            </select>
+          </div>
+        </div>
+
+        {filteredResources.length === 0 ? (
+          <div className="text-center py-16 animate-scaleIn">
+            <BookOpen className="w-20 h-20 text-gray-300 mx-auto mb-4" />
+            <p className="text-gray-600 text-lg font-semibold">No resources found</p>
+            <p className="text-gray-400 text-sm mt-2">
+              {searchQuery || filterType !== 'all'
+                ? 'Try adjusting your search or filters'
+                : 'Check back later for new resources'}
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+            {filteredResources.map((resource, index) => (
+              <div
+                key={resource.id}
+                className="bg-white border border-gray-200 rounded-xl p-5 hover:border-blue-300 hover:shadow-xl transition-all duration-300 card-hover"
+                style={{ animationDelay: `${index * 0.1}s` }}
+              >
+                <div className="flex items-start justify-between mb-3">
+                  <div className={`p-2 rounded-lg ${getFileTypeColor(resource.file_type)}`}>
+                    {getFileIcon(resource.file_type)}
                   </div>
+                  <span className={`px-3 py-1 rounded-full text-xs font-semibold uppercase ${getFileTypeColor(resource.file_type)}`}>
+                    {resource.file_type}
+                  </span>
+                </div>
+
+                <h3 className="text-lg font-bold text-gray-900 mb-2 line-clamp-2">{resource.title}</h3>
+                {resource.description && (
+                  <p className="text-gray-600 text-sm mb-3 line-clamp-3">{resource.description}</p>
+                )}
+
+                <div className="flex items-center justify-between text-sm text-gray-500 mb-4 pt-3 border-t border-gray-100">
+                  <span className="font-medium">{formatFileSize(resource.file_size)}</span>
+                  <span className="text-xs">{new Date(resource.uploaded_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <a
+                    href={resource.file_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all flex-1 font-medium shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                    <span className="hidden sm:inline">View</span>
+                  </a>
+                  <a
+                    href={resource.file_url}
+                    download
+                    className="flex items-center justify-center gap-2 px-4 py-2.5 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition-all font-medium shadow-sm hover:shadow-md"
+                    title="Download"
+                  >
+                    <Download className="w-4 h-4" />
+                  </a>
                 </div>
               </div>
-
-              <div className="flex items-center gap-3 pt-4 border-t border-gray-200">
-                <a
-                  href={resource.file_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex-1 justify-center"
-                >
-                  <ExternalLink className="w-4 h-4" />
-                  View
-                </a>
-                <a
-                  href={resource.file_url}
-                  download
-                  className="flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
-                >
-                  <Download className="w-4 h-4" />
-                </a>
-              </div>
-
-              <div className="mt-3 text-xs text-gray-400 text-center">
-                Uploaded {new Date(resource.uploaded_at).toLocaleDateString()}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
