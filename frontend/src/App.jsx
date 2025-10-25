@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { Login } from './components/Login';
 import { Register } from './components/Register';
@@ -12,6 +12,13 @@ function AppContent() {
   const { user, loading } = useAuth();
   const [authMode, setAuthMode] = useState('login');
   const [activeTab, setActiveTab] = useState('resources');
+
+  // Ensure activeTab is set to 'resources' when user logs in
+  useEffect(() => {
+    if (user && !loading) {
+      setActiveTab('resources');
+    }
+  }, [user, loading]);
 
   if (loading) {
     return (
@@ -41,9 +48,16 @@ function AppContent() {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         {activeTab === 'resources' && <PublicResources />}
-        {activeTab === 'upload' && user.role === 'student' && <UploadResource />}
-        {activeTab === 'my-resources' && user.role === 'student' && <MyResources />}
-        {activeTab === 'admin' && user.role === 'admin' && <AdminDashboard />}
+        {activeTab === 'upload' && user?.role === 'student' && <UploadResource />}
+        {activeTab === 'my-resources' && user?.role === 'student' && <MyResources />}
+        {activeTab === 'admin' && user?.role === 'admin' && <AdminDashboard />}
+        
+        {/* Fallback for invalid tabs */}
+        {!['resources', 'upload', 'my-resources', 'admin'].includes(activeTab) && (
+          <div className="text-center py-12">
+            <p className="text-gray-600">Invalid page. Redirecting...</p>
+          </div>
+        )}
       </main>
 
       <footer className="mt-auto py-6 text-center text-sm text-gray-500">
