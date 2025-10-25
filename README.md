@@ -214,8 +214,8 @@ Run: `node createAdmin.js`
 ## 🔑 Default Credentials
 
 After creating admin user:
-- **Email**: admin@college.edu
-- **Password**: admin123
+- **Email**: admin@example.com
+- **Password**: 123456
 
 ⚠️ **Change these credentials immediately after first login!**
 
