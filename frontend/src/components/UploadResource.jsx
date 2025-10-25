@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { resourceAPI } from '../api';
-import { Upload, FileText, Image, FileType, Presentation, X, AlertCircle, CheckCircle2, CloudUpload } from 'lucide-react';
+import { Upload, FileText, Image, FileType, Presentation, X, AlertCircle, CheckCircle2, Cloud } from 'lucide-react';
 
 export function UploadResource() {
   const [title, setTitle] = useState('');
@@ -229,7 +229,7 @@ export function UploadResource() {
                   </div>
                 ) : (
                   <>
-                    <CloudUpload className="mx-auto h-12 w-12 text-gray-400" />
+                    <Cloud className="mx-auto h-12 w-12 text-gray-400" />
                     <div className="flex text-sm text-gray-600 justify-center">
                       <label
                         htmlFor="file-upload"
