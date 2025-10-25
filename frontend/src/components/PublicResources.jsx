@@ -178,7 +178,7 @@ export function PublicResources() {
 
                 <div className="flex items-center gap-2">
                   <a
-                    href={resource.file_url}
+                    href={`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'}/resources/${resource.id}/view`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all flex-1 font-medium shadow-md hover:shadow-lg transform hover:-translate-y-0.5"

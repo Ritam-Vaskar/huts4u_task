@@ -10,7 +10,8 @@
     "init-db": "node config/initDatabase.js",
     "create-admin": "node createAdmin.js",
     "check-db": "node checkDatabase.js",
-    "clean-orphaned": "node cleanOrphaned.js"
+    "clean-orphaned": "node cleanOrphaned.js",
+    "fix-pdf-urls": "node fixPdfUrls.js"
   },
   "keywords": ["express", "mysql", "rest-api"],
   "author": "",

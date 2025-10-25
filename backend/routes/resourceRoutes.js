@@ -9,16 +9,20 @@ import {
   approveResource,
   rejectResource,
   deleteResource,
-  searchResources
+  searchResources,
+  viewResource
 } from '../controllers/resourceController.js';
 import { authenticateToken, authorizeRole } from '../middleware/auth.js';
 import { upload } from '../middleware/upload.js';
 
 const router = express.Router();
 
-// Public/Authenticated routes
+// Public routes (no auth required)
+router.get('/:id/view', viewResource); // View resource with inline display - public for approved resources
+
+// Authenticated routes
 router.get('/approved', authenticateToken, getApprovedResources);
-router.get('/search', authenticateToken, searchResources);
+router.get('/search', authenticateToken, searchResources)
 
 // Student routes
 router.post('/upload', authenticateToken, authorizeRole('student'), upload.single('file'), uploadResource);

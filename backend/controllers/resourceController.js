@@ -53,13 +53,15 @@ export const uploadResource = async (req, res, next) => {
     const uploadResult = await uploadToCloudinary(file.buffer, resourceType, fileType);
 
     // Construct proper viewing URL
-    // For raw files (PDFs, docs), modify URL to force inline display
+    // For raw files (PDFs, docs), we need to use authenticated URLs or transformation parameters
     let fileUrl = uploadResult.secure_url;
     
-    if (resourceType === 'raw') {
-      // Replace /upload/ with /upload/fl_attachment:false/ for inline viewing
-      // This tells Cloudinary to serve the file inline instead of as download
-      fileUrl = uploadResult.secure_url.replace('/upload/', '/upload/fl_attachment:false/');
+    if (resourceType === 'raw' && fileType === 'pdf') {
+      // For PDFs, we need to convert the raw URL to use 'image' resource type with page parameter
+      // OR use the raw URL but modify it to open in a new tab with proper headers
+      // The best approach is to use fl_attachment transformation
+      // But since Cloudinary raw files don't support this well, we'll handle it on frontend
+      fileUrl = uploadResult.secure_url;
     }
 
     // Verify user exists in database before creating resource
@@ -90,11 +92,22 @@ export const uploadResource = async (req, res, next) => {
   }
 };
 
+// Helper function to ensure URLs have inline viewing for PDFs
+const fixResourceUrl = (resource) => {
+  // If it's a raw file (PDF, doc, ppt) and URL doesn't have fl_attachment flag
+  if (resource.file_type !== 'image' && resource.file_url.includes('/upload/') && !resource.file_url.includes('fl_attachment')) {
+    resource.file_url = resource.file_url.replace('/upload/', '/upload/fl_attachment/');
+  }
+  return resource;
+};
+
 // Get all approved resources (public)
 export const getApprovedResources = async (req, res, next) => {
   try {
     const resources = await Resource.findApproved();
-    res.json({ resources });
+    // Fix URLs for inline viewing
+    const fixedResources = resources.map(fixResourceUrl);
+    res.json({ resources: fixedResources });
   } catch (error) {
     next(error);
   }
@@ -104,7 +117,9 @@ export const getApprovedResources = async (req, res, next) => {
 export const getMyResources = async (req, res, next) => {
   try {
     const resources = await Resource.findByUser(req.user.id);
-    res.json({ resources });
+    // Fix URLs for inline viewing
+    const fixedResources = resources.map(fixResourceUrl);
+    res.json({ resources: fixedResources });
   } catch (error) {
     next(error);
   }
@@ -114,7 +129,9 @@ export const getMyResources = async (req, res, next) => {
 export const getAllResources = async (req, res, next) => {
   try {
     const resources = await Resource.findAll();
-    res.json({ resources });
+    // Fix URLs for inline viewing
+    const fixedResources = resources.map(fixResourceUrl);
+    res.json({ resources: fixedResources });
   } catch (error) {
     next(error);
   }
@@ -130,7 +147,9 @@ export const getResourceById = async (req, res, next) => {
       return res.status(404).json({ error: 'Resource not found' });
     }
 
-    res.json({ resource });
+    // Fix URL for inline viewing
+    const fixedResource = fixResourceUrl(resource);
+    res.json({ resource: fixedResource });
   } catch (error) {
     next(error);
   }
@@ -281,6 +300,35 @@ export const searchResources = async (req, res, next) => {
     const resources = await Resource.searchResources(q, fileType);
 
     res.json({ resources });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// View resource with proper headers for inline display
+export const viewResource = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const resource = await Resource.findById(id);
+
+    if (!resource) {
+      return res.status(404).json({ error: 'Resource not found' });
+    }
+
+    // Only approved resources can be viewed publicly
+    if (resource.status !== 'approved') {
+      return res.status(403).json({ error: 'This resource is not yet approved for viewing' });
+    }
+
+    // For PDFs and documents, redirect to Cloudinary but with inline viewing
+    // We'll use Google Docs Viewer for better inline PDF viewing
+    if (resource.file_type === 'pdf') {
+      const googleDocsViewerUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(resource.file_url)}&embedded=true`;
+      return res.redirect(googleDocsViewerUrl);
+    }
+
+    // For other file types, just redirect to the file URL
+    res.redirect(resource.file_url);
   } catch (error) {
     next(error);
   }

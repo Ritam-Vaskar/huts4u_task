@@ -249,7 +249,7 @@ export function AdminDashboard() {
                     </div>
                   </div>
                   <a
-                    href={resource.file_url}
+                    href={`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'}/resources/${resource.id}/view`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-blue-600 hover:text-blue-800 p-2 hover:bg-blue-100 rounded-lg transition-colors"
