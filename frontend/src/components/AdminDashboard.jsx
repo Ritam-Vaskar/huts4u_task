@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { resourceAPI } from '../api';
-import { Shield, CheckCircle, XCircle, Trash2, ExternalLink, AlertTriangle, TrendingUp, Clock, FileCheck } from 'lucide-react';
+import { Shield, CheckCircle, XCircle, Trash2, ExternalLink, AlertTriangle, TrendingUp, Clock, FileCheck, Eye, Download, Star } from 'lucide-react';
 
 export function AdminDashboard() {
   const [resources, setResources] = useState([]);
@@ -68,6 +68,14 @@ export function AdminDashboard() {
     } finally {
       setActionLoading(null);
     }
+  };
+
+  const formatCount = (count) => {
+    if (!count || count === 0) return '0';
+    if (count < 1000) return count.toString();
+    if (count < 10000) return (count / 1000).toFixed(1) + 'k';
+    if (count < 1000000) return Math.floor(count / 1000) + 'k';
+    return (count / 1000000).toFixed(1) + 'M';
   };
 
   const formatFileSize = (bytes) => {
@@ -242,6 +250,26 @@ export function AdminDashboard() {
                     {resource.description && (
                       <p className="text-gray-600 text-sm mb-3 line-clamp-3">{resource.description}</p>
                     )}
+                    
+                    {/* Statistics - Only show for approved resources */}
+                    {resource.status === 'approved' && (
+                      <div className="flex items-center gap-4 text-xs text-gray-600 mb-3">
+                        <div className="flex items-center gap-1" title="Views">
+                          <Eye className="w-4 h-4" />
+                          <span>{formatCount(resource.view_count || 0)}</span>
+                        </div>
+                        <div className="flex items-center gap-1" title="Downloads">
+                          <Download className="w-4 h-4" />
+                          <span>{formatCount(resource.download_count || 0)}</span>
+                        </div>
+                        <div className="flex items-center gap-1" title={resource.average_rating && resource.average_rating > 0 ? `Average rating: ${Number(resource.average_rating).toFixed(1)}` : 'No ratings yet'}>
+                          <Star className={`w-4 h-4 ${resource.average_rating && resource.average_rating > 0 ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`} />
+                          <span>{resource.average_rating && resource.average_rating > 0 ? Number(resource.average_rating).toFixed(1) : '0.0'}</span>
+                          <span className="text-gray-400">({resource.rating_count || 0})</span>
+                        </div>
+                      </div>
+                    )}
+                    
                     <div className="flex flex-wrap items-center gap-3 text-sm text-gray-500">
                       <span className="uppercase font-semibold px-2 py-1 bg-white rounded">{resource.file_type}</span>
                       <span>{formatFileSize(resource.file_size)}</span>

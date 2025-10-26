@@ -1,10 +1,97 @@
 import { useAuth } from '../contexts/AuthContext';
-import { BookOpen, Upload, FileText, Shield, LogOut, Menu, X, User } from 'lucide-react';
-import { useState } from 'react';
+import { BookOpen, Upload, FileText, Shield, LogOut, Menu, X, User, Bell, Check, CheckCheck, Heart } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { resourceAPI } from '../api';
 
 export function Navigation({ activeTab, onTabChange }) {
   const { user, signOut } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const notifRef = useRef(null);
+
+  useEffect(() => {
+    fetchUnreadCount();
+    const interval = setInterval(fetchUnreadCount, 30000); // Poll every 30 seconds
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    if (notificationsOpen) {
+      fetchNotifications();
+    }
+  }, [notificationsOpen]);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (notifRef.current && !notifRef.current.contains(event.target)) {
+        setNotificationsOpen(false);
+      }
+    };
+
+    if (notificationsOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [notificationsOpen]);
+
+  const fetchUnreadCount = async () => {
+    try {
+      const response = await resourceAPI.getUnreadCount();
+      setUnreadCount(response.data.count);
+    } catch (error) {
+      console.error('Error fetching unread count:', error);
+    }
+  };
+
+  const fetchNotifications = async () => {
+    try {
+      const response = await resourceAPI.getNotifications(false);
+      setNotifications(response.data.notifications);
+    } catch (error) {
+      console.error('Error fetching notifications:', error);
+    }
+  };
+
+  const markAsRead = async (notificationId) => {
+    try {
+      await resourceAPI.markNotificationRead(notificationId);
+      setNotifications(prev =>
+        prev.map(n => n.id === notificationId ? { ...n, is_read: true } : n)
+      );
+      fetchUnreadCount();
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+    }
+  };
+
+  const markAllAsRead = async () => {
+    try {
+      await resourceAPI.markAllNotificationsRead();
+      setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
+      setUnreadCount(0);
+    } catch (error) {
+      console.error('Error marking all as read:', error);
+    }
+  };
+
+  const getNotificationIcon = (type) => {
+    switch (type) {
+      case 'approval':
+        return '✅';
+      case 'rejection':
+        return '❌';
+      case 'rating':
+        return '⭐';
+      case 'comment':
+        return '💬';
+      case 'announcement':
+        return '📢';
+      default:
+        return '🔔';
+    }
+  };
 
   const handleSignOut = async () => {
     try {
@@ -72,6 +159,18 @@ export function Navigation({ activeTab, onTabChange }) {
                   <FileText className="w-5 h-5" />
                   <span>My Uploads</span>
                 </button>
+
+                <button
+                  onClick={() => onTabChange('favorites')}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-xl font-medium transition-all duration-200 ${
+                    activeTab === 'favorites'
+                      ? 'bg-pink-100 text-pink-700 shadow-sm'
+                      : 'text-gray-600 hover:bg-gray-100'
+                  }`}
+                >
+                  <Heart className="w-5 h-5" />
+                  <span>Favorites</span>
+                </button>
               </>
             )}
 
@@ -92,6 +191,86 @@ export function Navigation({ activeTab, onTabChange }) {
 
           {/* User Info & Sign Out */}
           <div className="hidden lg:flex items-center gap-4">
+            {/* Notification Bell */}
+            <div className="relative" ref={notifRef}>
+              <button
+                onClick={() => setNotificationsOpen(!notificationsOpen)}
+                className="relative p-2 hover:bg-gray-100 rounded-xl transition-colors"
+                title="Notifications"
+              >
+                <Bell className="w-6 h-6 text-gray-700" />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold animate-pulse">
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
+                )}
+              </button>
+
+              {/* Notification Dropdown */}
+              {notificationsOpen && (
+                <div className="absolute right-0 mt-2 w-96 bg-white rounded-xl shadow-2xl border border-gray-200 max-h-[32rem] flex flex-col z-50">
+                  <div className="flex items-center justify-between p-4 border-b border-gray-200">
+                    <h3 className="text-lg font-bold text-gray-900">Notifications</h3>
+                    {unreadCount > 0 && (
+                      <button
+                        onClick={markAllAsRead}
+                        className="text-xs text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1"
+                      >
+                        <CheckCheck className="w-4 h-4" />
+                        Mark all read
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="overflow-y-auto flex-1">
+                    {notifications.length === 0 ? (
+                      <div className="p-8 text-center">
+                        <Bell className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                        <p className="text-gray-500">No notifications yet</p>
+                      </div>
+                    ) : (
+                      <div className="divide-y divide-gray-100">
+                        {notifications.map((notification) => (
+                          <div
+                            key={notification.id}
+                            className={`p-4 hover:bg-gray-50 transition-colors cursor-pointer ${
+                              !notification.is_read ? 'bg-blue-50' : ''
+                            }`}
+                            onClick={() => !notification.is_read && markAsRead(notification.id)}
+                          >
+                            <div className="flex gap-3">
+                              <span className="text-2xl flex-shrink-0">
+                                {getNotificationIcon(notification.type)}
+                              </span>
+                              <div className="flex-1 min-w-0">
+                                <p className="font-semibold text-gray-900 text-sm mb-1">
+                                  {notification.title}
+                                </p>
+                                <p className="text-sm text-gray-600 line-clamp-2">
+                                  {notification.message}
+                                </p>
+                                <p className="text-xs text-gray-400 mt-2">
+                                  {new Date(notification.created_at).toLocaleString('en-US', {
+                                    month: 'short',
+                                    day: 'numeric',
+                                    hour: '2-digit',
+                                    minute: '2-digit'
+                                  })}
+                                </p>
+                              </div>
+                              {!notification.is_read && (
+                                <div className="w-2 h-2 bg-blue-600 rounded-full flex-shrink-0 mt-2"></div>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
             <div className="flex items-center gap-3 px-4 py-2 bg-gray-50 rounded-xl">
               <div className="bg-gradient-to-br from-blue-600 to-indigo-600 p-2 rounded-full">
                 <User className="w-4 h-4 text-white" />
@@ -159,6 +338,18 @@ export function Navigation({ activeTab, onTabChange }) {
                   >
                     <FileText className="w-5 h-5" />
                     <span>My Uploads</span>
+                  </button>
+
+                  <button
+                    onClick={() => handleTabChange('favorites')}
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all ${
+                      activeTab === 'favorites'
+                        ? 'bg-pink-100 text-pink-700'
+                        : 'text-gray-600 hover:bg-gray-100'
+                    }`}
+                  >
+                    <Heart className="w-5 h-5" />
+                    <span>Favorites</span>
                   </button>
                 </>
               )}

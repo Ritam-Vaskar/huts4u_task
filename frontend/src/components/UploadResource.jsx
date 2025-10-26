@@ -1,16 +1,32 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { resourceAPI } from '../api';
 import { Upload, FileText, Image, FileType, Presentation, X, AlertCircle, CheckCircle2, Cloud } from 'lucide-react';
+import { TagSelector } from './Tags';
 
 export function UploadResource() {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [file, setFile] = useState(null);
+  const [file, setFile] = useState('');
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [dragActive, setDragActive] = useState(false);
+  const [availableTags, setAvailableTags] = useState([]);
+  const [selectedTags, setSelectedTags] = useState([]);
+
+  useEffect(() => {
+    fetchTags();
+  }, []);
+
+  const fetchTags = async () => {
+    try {
+      const response = await resourceAPI.getAllTags();
+      setAvailableTags(response.data.tags || []);
+    } catch (error) {
+      console.error('Error fetching tags:', error);
+    }
+  };
 
   const getFileType = (mimeType) => {
     if (mimeType === 'application/pdf') return 'pdf';
@@ -113,15 +129,25 @@ export function UploadResource() {
         });
       }, 200);
 
-      await resourceAPI.uploadResource(formData);
+      const response = await resourceAPI.uploadResource(formData);
       
       clearInterval(progressInterval);
-      setUploadProgress(100);
+      setUploadProgress(95);
 
+      // Add tags if selected
+      if (selectedTags.length > 0 && response.data.resource?.id) {
+        const tagIds = selectedTags.map(tag => tag.id);
+        await resourceAPI.addTagsToResource(response.data.resource.id, tagIds);
+      }
+
+      setUploadProgress(100);
       setSuccess('Resource uploaded successfully! Awaiting admin approval.');
+      
+      // Reset form
       setTitle('');
       setDescription('');
       setFile(null);
+      setSelectedTags([]);
 
       const fileInput = document.getElementById('file-upload');
       if (fileInput) fileInput.value = '';
@@ -192,6 +218,19 @@ export function UploadResource() {
               className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none hover:border-gray-400"
               placeholder="Provide details about this resource..."
             />
+          </div>
+
+          {/* Tags Selector */}
+          <div className="space-y-2">
+            <TagSelector
+              availableTags={availableTags}
+              selectedTags={selectedTags}
+              onChange={setSelectedTags}
+              label="Tags (Optional)"
+            />
+            <p className="text-xs text-gray-500">
+              Add relevant tags to help others find your resource
+            </p>
           </div>
 
           <div className="space-y-2">

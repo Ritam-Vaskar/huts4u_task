@@ -10,7 +10,21 @@ import {
   rejectResource,
   deleteResource,
   searchResources,
-  viewResource
+  viewResource,
+  trackDownload,
+  getAllTags,
+  addTagsToResource,
+  getResourceTags,
+  rateResource,
+  getResourceRatings,
+  getUserRating,
+  toggleFavorite,
+  getUserFavorites,
+  checkFavorite,
+  getUserNotifications,
+  markNotificationRead,
+  markAllNotificationsRead,
+  getUnreadCount
 } from '../controllers/resourceController.js';
 import { authenticateToken, authorizeRole } from '../middleware/auth.js';
 import { upload } from '../middleware/upload.js';
@@ -22,7 +36,31 @@ router.get('/:id/view', viewResource); // View resource with inline display - pu
 
 // Authenticated routes
 router.get('/approved', authenticateToken, getApprovedResources);
-router.get('/search', authenticateToken, searchResources)
+router.get('/search', authenticateToken, searchResources);
+
+// Download tracking
+router.post('/:id/download', authenticateToken, trackDownload);
+
+// Tags routes
+router.get('/tags/all', authenticateToken, getAllTags);
+router.get('/:id/tags', authenticateToken, getResourceTags);
+router.post('/:id/tags', authenticateToken, addTagsToResource);
+
+// Rating & Review routes
+router.post('/:id/rate', authenticateToken, rateResource);
+router.get('/:id/ratings', authenticateToken, getResourceRatings);
+router.get('/:id/my-rating', authenticateToken, getUserRating);
+
+// Favorites routes
+router.post('/:id/favorite', authenticateToken, toggleFavorite);
+router.get('/favorites/my-favorites', authenticateToken, getUserFavorites);
+router.get('/:id/is-favorite', authenticateToken, checkFavorite);
+
+// Notifications routes
+router.get('/notifications/all', authenticateToken, getUserNotifications);
+router.get('/notifications/unread-count', authenticateToken, getUnreadCount);
+router.put('/notifications/:id/read', authenticateToken, markNotificationRead);
+router.put('/notifications/mark-all-read', authenticateToken, markAllNotificationsRead);
 
 // Student routes
 router.post('/upload', authenticateToken, authorizeRole('student'), upload.single('file'), uploadResource);

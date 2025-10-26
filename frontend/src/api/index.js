@@ -40,12 +40,55 @@ export const resourceAPI = {
   approveResource: (id) => 
     api.put(`/resources/${id}/approve`),
   
-  rejectResource: (id) => 
-    api.put(`/resources/${id}/reject`),
+  rejectResource: (id, reason) => 
+    api.put(`/resources/${id}/reject`, { reason }),
   
   deleteResource: (id) => 
     api.delete(`/resources/${id}`),
   
   searchResources: (query, fileType) => 
-    api.get('/resources/search', { params: { q: query, fileType } })
+    api.get('/resources/search', { params: { q: query, fileType } }),
+
+  // Tags
+  getAllTags: () =>
+    api.get('/resources/tags/all'),
+  
+  getResourceTags: (id) =>
+    api.get(`/resources/${id}/tags`),
+  
+  addTagsToResource: (id, tagIds) =>
+    api.post(`/resources/${id}/tags`, { tagIds }),
+
+  // Ratings
+  rateResource: (id, rating, review) =>
+    api.post(`/resources/${id}/rate`, { rating, review }),
+  
+  getResourceRatings: (id) =>
+    api.get(`/resources/${id}/ratings`),
+  
+  getUserRating: (id) =>
+    api.get(`/resources/${id}/my-rating`),
+
+  // Favorites
+  toggleFavorite: (id) =>
+    api.post(`/resources/${id}/favorite`),
+  
+  getUserFavorites: () =>
+    api.get('/resources/favorites/my-favorites'),
+  
+  checkFavorite: (id) =>
+    api.get(`/resources/${id}/is-favorite`),
+
+  // Notifications
+  getNotifications: (unreadOnly = false) =>
+    api.get('/resources/notifications/all', { params: { unreadOnly } }),
+  
+  getUnreadCount: () =>
+    api.get('/resources/notifications/unread-count'),
+  
+  markNotificationRead: (id) =>
+    api.put(`/resources/notifications/${id}/read`),
+  
+  markAllNotificationsRead: () =>
+    api.put('/resources/notifications/mark-all-read')
 };

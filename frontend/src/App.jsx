@@ -7,6 +7,7 @@ import { PublicResources } from './components/PublicResources';
 import { UploadResource } from './components/UploadResource';
 import { MyResources } from './components/MyResources';
 import { AdminDashboard } from './components/AdminDashboard';
+import { Favorites } from './components/Favorites';
 
 function AppContent() {
   const { user, loading } = useAuth();
@@ -50,10 +51,11 @@ function AppContent() {
         {activeTab === 'resources' && <PublicResources />}
         {activeTab === 'upload' && user?.role === 'student' && <UploadResource />}
         {activeTab === 'my-resources' && user?.role === 'student' && <MyResources />}
+        {activeTab === 'favorites' && user?.role === 'student' && <Favorites />}
         {activeTab === 'admin' && user?.role === 'admin' && <AdminDashboard />}
         
         {/* Fallback for invalid tabs */}
-        {!['resources', 'upload', 'my-resources', 'admin'].includes(activeTab) && (
+        {!['resources', 'upload', 'my-resources', 'favorites', 'admin'].includes(activeTab) && (
           <div className="text-center py-12">
             <p className="text-gray-600">Invalid page. Redirecting...</p>
           </div>

@@ -1,79 +1,33 @@
 import { useState, useEffect } from 'react';
 import { resourceAPI } from '../api';
-import { BookOpen, Download, ExternalLink, Search, Filter, FileText, Image, FileCode, Presentation, Eye, Star, Heart, X, MessageSquare } from 'lucide-react';
+import { Heart, Download, ExternalLink, Search, FileText, Image, FileCode, Presentation, Eye, Star, Sparkles, X, MessageSquare } from 'lucide-react';
 import axios from '../api/axios';
 import { TagsDisplay } from './Tags';
 import { RatingSection } from './Rating';
 
-export function PublicResources() {
-  const [resources, setResources] = useState([]);
-  const [filteredResources, setFilteredResources] = useState([]);
+export function Favorites() {
+  const [favorites, setFavorites] = useState([]);
+  const [filteredFavorites, setFilteredFavorites] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [filterType, setFilterType] = useState('all');
-  const [availableTags, setAvailableTags] = useState([]);
-  const [selectedTagFilter, setSelectedTagFilter] = useState(null);
-  const [favorites, setFavorites] = useState(new Set());
   const [selectedResource, setSelectedResource] = useState(null);
   const [showRatingModal, setShowRatingModal] = useState(false);
 
   useEffect(() => {
-    fetchApprovedResources();
-    fetchTags();
     fetchFavorites();
   }, []);
 
   useEffect(() => {
-    filterResources();
-  }, [searchQuery, filterType, selectedTagFilter, resources]);
-
-  const fetchTags = async () => {
-    try {
-      const response = await resourceAPI.getAllTags();
-      setAvailableTags(response.data.tags || []);
-    } catch (error) {
-      console.error('Error fetching tags:', error);
-    }
-  };
+    filterFavorites();
+  }, [searchQuery, favorites]);
 
   const fetchFavorites = async () => {
     try {
       const response = await resourceAPI.getUserFavorites();
-      const favoriteIds = new Set(response.data.favorites.map(f => f.id));
-      setFavorites(favoriteIds);
+      setFavorites(response.data.favorites || []);
+      setFilteredFavorites(response.data.favorites || []);
     } catch (error) {
       console.error('Error fetching favorites:', error);
-    }
-  };
-
-  const toggleFavorite = async (resourceId, e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    
-    try {
-      const response = await resourceAPI.toggleFavorite(resourceId);
-      
-      if (response.data.isFavorite) {
-        setFavorites(prev => new Set([...prev, resourceId]));
-      } else {
-        setFavorites(prev => {
-          const newFavorites = new Set(prev);
-          newFavorites.delete(resourceId);
-          return newFavorites;
-        });
-      }
-    } catch (error) {
-      console.error('Error toggling favorite:', error);
-    }
-  };
-
-  const fetchApprovedResources = async () => {
-    try {
-      const response = await resourceAPI.getApprovedResources();
-      setResources(response.data.resources || []);
-      setFilteredResources(response.data.resources || []);
-    } catch (error) {
-      console.error('Error fetching resources:', error);
     } finally {
       setLoading(false);
     }
@@ -94,39 +48,42 @@ export function PublicResources() {
   };
 
   const handleRatingUpdate = async () => {
-    // Refresh resources to get updated ratings
-    await fetchApprovedResources();
+    // Refresh favorites to get updated ratings
+    await fetchFavorites();
     // Update the selected resource with fresh data
     if (selectedResource) {
-      const response = await resourceAPI.getApprovedResources();
-      const updated = response.data.resources.find(r => r.id === selectedResource.id);
+      const response = await resourceAPI.getUserFavorites();
+      const updated = response.data.favorites.find(r => r.id === selectedResource.id);
       if (updated) {
         setSelectedResource(updated);
       }
     }
   };
 
-  const filterResources = () => {
-    let filtered = resources;
-
-    if (searchQuery) {
-      filtered = filtered.filter(resource =>
-        resource.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        resource.description?.toLowerCase().includes(searchQuery.toLowerCase())
-      );
+  const filterFavorites = () => {
+    if (!searchQuery) {
+      setFilteredFavorites(favorites);
+      return;
     }
 
-    if (filterType !== 'all') {
-      filtered = filtered.filter(resource => resource.file_type === filterType);
-    }
+    const filtered = favorites.filter(resource =>
+      resource.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      resource.description?.toLowerCase().includes(searchQuery.toLowerCase())
+    );
 
-    if (selectedTagFilter) {
-      filtered = filtered.filter(resource =>
-        resource.tags && resource.tags.some(tag => tag.id === selectedTagFilter.id)
-      );
-    }
+    setFilteredFavorites(filtered);
+  };
 
-    setFilteredResources(filtered);
+  const removeFavorite = async (resourceId, e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    try {
+      await resourceAPI.toggleFavorite(resourceId);
+      setFavorites(prev => prev.filter(f => f.id !== resourceId));
+    } catch (error) {
+      console.error('Error removing favorite:', error);
+    }
   };
 
   const formatFileSize = (bytes) => {
@@ -146,23 +103,10 @@ export function PublicResources() {
 
   const handleDownload = async (resource) => {
     try {
-      // Track the download
       await axios.post(`/resources/${resource.id}/download`);
-      
-      // Update local state to reflect the increment
-      setResources(prevResources =>
-        prevResources.map(r =>
-          r.id === resource.id
-            ? { ...r, download_count: (r.download_count || 0) + 1 }
-            : r
-        )
-      );
-      
-      // Proceed with download
       window.open(resource.file_url, '_blank');
     } catch (error) {
       console.error('Error tracking download:', error);
-      // Still allow download even if tracking fails
       window.open(resource.file_url, '_blank');
     }
   };
@@ -202,10 +146,10 @@ export function PublicResources() {
       <div className="bg-white rounded-2xl shadow-lg p-6 sm:p-8 animate-fadeIn">
         <div className="flex flex-col items-center justify-center py-12">
           <div className="relative">
-            <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-200"></div>
-            <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-blue-600 absolute top-0 left-0"></div>
+            <div className="animate-spin rounded-full h-16 w-16 border-4 border-pink-200"></div>
+            <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-pink-600 absolute top-0 left-0"></div>
           </div>
-          <p className="mt-4 text-gray-600 font-medium">Loading resources...</p>
+          <p className="mt-4 text-gray-600 font-medium">Loading your favorites...</p>
         </div>
       </div>
     );
@@ -213,95 +157,67 @@ export function PublicResources() {
 
   return (
     <div className="space-y-6 animate-fadeIn">
-      <div className="bg-gradient-to-br from-white to-blue-50 rounded-2xl shadow-xl p-6 sm:p-8 card-hover">
+      <div className="bg-gradient-to-br from-white to-pink-50 rounded-2xl shadow-xl p-6 sm:p-8 card-hover">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
           <div className="flex items-center gap-3">
-            <div className="bg-gradient-to-br from-blue-600 to-indigo-600 rounded-full p-3 shadow-lg">
-              <BookOpen className="w-6 h-6 text-white" />
+            <div className="bg-gradient-to-br from-pink-600 to-rose-600 rounded-full p-3 shadow-lg">
+              <Heart className="w-6 h-6 text-white fill-white" />
             </div>
             <div>
-              <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">Resource Library</h2>
-              <p className="text-gray-600 text-sm sm:text-base">{filteredResources.length} approved resources available</p>
+              <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">My Favorites</h2>
+              <p className="text-gray-600 text-sm sm:text-base">{filteredFavorites.length} saved resources</p>
             </div>
           </div>
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-6">
-          <div className="flex-1 relative group">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 group-focus-within:text-blue-500 transition-colors" />
-            <input
-              type="text"
-              placeholder="Search resources..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all hover:border-gray-400"
-            />
-          </div>
-          <div className="relative group sm:w-48">
-            <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 group-focus-within:text-blue-500 transition-colors" />
-            <select
-              value={filterType}
-              onChange={(e) => setFilterType(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all appearance-none bg-white hover:border-gray-400 cursor-pointer"
-            >
-              <option value="all">All Types</option>
-              <option value="pdf">📄 PDF</option>
-              <option value="image">🖼️ Images</option>
-              <option value="doc">📝 Documents</option>
-              <option value="ppt">📊 Presentations</option>
-            </select>
-          </div>
-        </div>
-
-        {/* Tag Filter Pills */}
-        {availableTags.length > 0 && (
-          <div className="flex flex-wrap items-center gap-2 mb-6 p-4 bg-gray-50 rounded-xl">
-            <span className="text-sm font-semibold text-gray-700">Filter by tag:</span>
-            <button
-              onClick={() => setSelectedTagFilter(null)}
-              className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${
-                !selectedTagFilter
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-300'
-              }`}
-            >
-              All
-            </button>
-            {availableTags.map(tag => (
-              <button
-                key={tag.id}
-                onClick={() => setSelectedTagFilter(selectedTagFilter?.id === tag.id ? null : tag)}
-                className="px-3 py-1 rounded-full text-xs font-medium transition-all"
-                style={{
-                  backgroundColor: selectedTagFilter?.id === tag.id ? tag.color : 'white',
-                  color: selectedTagFilter?.id === tag.id ? 'white' : tag.color,
-                  border: `1px solid ${tag.color}`
-                }}
-              >
-                {tag.name}
-              </button>
-            ))}
+        {favorites.length > 0 && (
+          <div className="mb-6">
+            <div className="relative group">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 group-focus-within:text-pink-500 transition-colors" />
+              <input
+                type="text"
+                placeholder="Search favorites..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-pink-500 focus:border-transparent transition-all hover:border-gray-400"
+              />
+            </div>
           </div>
         )}
 
-        {filteredResources.length === 0 ? (
+        {filteredFavorites.length === 0 ? (
           <div className="text-center py-16 animate-scaleIn">
-            <BookOpen className="w-20 h-20 text-gray-300 mx-auto mb-4" />
-            <p className="text-gray-600 text-lg font-semibold">No resources found</p>
-            <p className="text-gray-400 text-sm mt-2">
-              {searchQuery || filterType !== 'all'
-                ? 'Try adjusting your search or filters'
-                : 'Check back later for new resources'}
-            </p>
+            {favorites.length === 0 ? (
+              <>
+                <Heart className="w-20 h-20 text-gray-300 mx-auto mb-4" />
+                <p className="text-gray-600 text-lg font-semibold">No favorites yet</p>
+                <p className="text-gray-400 text-sm mt-2">
+                  Start adding resources to your favorites by clicking the heart icon
+                </p>
+              </>
+            ) : (
+              <>
+                <Search className="w-20 h-20 text-gray-300 mx-auto mb-4" />
+                <p className="text-gray-600 text-lg font-semibold">No matching favorites</p>
+                <p className="text-gray-400 text-sm mt-2">
+                  Try adjusting your search query
+                </p>
+              </>
+            )}
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-            {filteredResources.map((resource, index) => (
+            {filteredFavorites.map((resource, index) => (
               <div
                 key={resource.id}
-                className="bg-white border border-gray-200 rounded-xl p-5 hover:border-blue-300 hover:shadow-xl transition-all duration-300 card-hover"
+                className="bg-white border border-gray-200 rounded-xl p-5 hover:border-pink-300 hover:shadow-xl transition-all duration-300 card-hover relative"
                 style={{ animationDelay: `${index * 0.1}s` }}
               >
+                {/* Favorite badge */}
+                <div className="absolute -top-2 -right-2 bg-gradient-to-br from-pink-500 to-rose-500 text-white rounded-full p-2 shadow-lg">
+                  <Sparkles className="w-4 h-4" />
+                </div>
+
                 <div className="flex items-start justify-between mb-3">
                   <div className={`p-2 rounded-lg ${getFileTypeColor(resource.file_type)}`}>
                     {getFileIcon(resource.file_type)}
@@ -311,17 +227,11 @@ export function PublicResources() {
                       {resource.file_type}
                     </span>
                     <button
-                      onClick={(e) => toggleFavorite(resource.id, e)}
-                      className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
-                      title={favorites.has(resource.id) ? 'Remove from favorites' : 'Add to favorites'}
+                      onClick={(e) => removeFavorite(resource.id, e)}
+                      className="p-2 rounded-lg hover:bg-red-100 transition-colors group"
+                      title="Remove from favorites"
                     >
-                      <Heart
-                        className={`w-5 h-5 transition-all ${
-                          favorites.has(resource.id)
-                            ? 'fill-red-500 text-red-500'
-                            : 'text-gray-400 hover:text-red-500'
-                        }`}
-                      />
+                      <Heart className="w-5 h-5 fill-red-500 text-red-500 group-hover:fill-transparent transition-all" />
                     </button>
                   </div>
                 </div>
@@ -359,7 +269,7 @@ export function PublicResources() {
                   </button>
                   <button
                     onClick={(e) => openRatingModal(resource, e)}
-                    className="flex items-center gap-1 hover:text-blue-600 transition-colors ml-auto text-blue-600"
+                    className="flex items-center gap-1 hover:text-pink-600 transition-colors ml-auto text-pink-600"
                     title="View reviews and rate this resource"
                   >
                     <MessageSquare className="w-4 h-4" />
@@ -377,7 +287,7 @@ export function PublicResources() {
                     href={`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'}/resources/${resource.id}/view`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all flex-1 font-medium shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
+                    className="flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-pink-600 to-rose-600 text-white rounded-xl hover:from-pink-700 hover:to-rose-700 transition-all flex-1 font-medium shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
                   >
                     <ExternalLink className="w-4 h-4" />
                     <span className="hidden sm:inline">View</span>
@@ -407,13 +317,13 @@ export function PublicResources() {
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal Header - Sticky */}
-            <div className="sticky top-0 bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-4 sm:p-6 flex items-center justify-between z-10 shadow-lg">
+            <div className="sticky top-0 bg-gradient-to-r from-pink-600 to-rose-600 text-white p-4 sm:p-6 flex items-center justify-between z-10 shadow-lg">
               <div className="flex-1 min-w-0">
                 <h2 className="text-xl sm:text-2xl font-bold line-clamp-2 mb-1">
                   {selectedResource.title}
                 </h2>
                 {selectedResource.description && (
-                  <p className="text-sm text-blue-100 line-clamp-2">
+                  <p className="text-sm text-pink-100 line-clamp-2">
                     {selectedResource.description}
                   </p>
                 )}
@@ -452,7 +362,7 @@ export function PublicResources() {
                   href={`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'}/resources/${selectedResource.id}/view`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all font-medium text-sm"
+                  className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-pink-600 to-rose-600 text-white rounded-lg hover:from-pink-700 hover:to-rose-700 transition-all font-medium text-sm"
                 >
                   <ExternalLink className="w-4 h-4" />
                   View File
